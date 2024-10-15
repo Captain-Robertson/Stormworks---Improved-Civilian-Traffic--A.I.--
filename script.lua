@@ -383,8 +383,8 @@ function onTick(tick_time)
         end
     end
     for vehicle_id, vehicle_object in pairs(g_savedata.vehicles) do
-
-        if vehicle_object ~= nil then
+        local _,vehicle_success = server.getVehicleData(vehicle_id)
+        if vehicle_object ~= nil and vehicle_success then
             vehicle_object.state.timer = vehicle_object.state.timer + 1
             if not isAircraft(vehicle_object) then
                 if vehicle_object.state.s == "pathing" then
