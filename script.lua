@@ -64,11 +64,13 @@ function onCreate(is_world_create)
                     zones = spawnObjects(spawn_transform, location.playlist_index, location.location_index, location.objects.zones, all_mission_objects)
                 }
 
-                g_savedata.vehicles[spawned_objects.vehicle.id] = {survivors = spawned_objects.survivors, destination = { x = 0, z = 0 }, path = {}, map_id = server.getMapID(), state = { s = "pseudo", timer = math.fmod(spawned_objects.vehicle.id, 300) }, bounds = location.objects.vehicle.bounds, size = spawned_objects.vehicle.size, current_damage = 0, despawn_timer = 0, ai_type = spawned_objects.vehicle.ai_type }
-                if spawned_objects.vehicle.ai_type == "heli" or spawned_objects.vehicle.ai_type == "plane" then
-                    createAircraftPath(spawned_objects.vehicle.id)
-                end
 
+                if isAircraft(spawned_objects.vehicle) then
+                    g_savedata.vehicles[spawned_objects.vehicle.id] = {survivors = spawned_objects.survivors, path = {}, state = { s = "pathing", timer = math.fmod(spawned_objects.vehicle.id, 300), is_simulating = false }, ui_id = server.getMapID(), map_id = server.getMapID(), ai_type = spawned_objects.vehicle.ai_type, bounds = location.objects.vehicle.bounds, current_damage = 0, despawn_timer = 0}
+                    createAircraftPath(spawned_objects.vehicle.id)
+                else
+                    g_savedata.vehicles[spawned_objects.vehicle.id] = {survivors = spawned_objects.survivors, destination = { x = 0, z = 0 }, path = {}, map_id = server.getMapID(), state = { s = "pseudo", timer = math.fmod(spawned_objects.vehicle.id, 300) }, bounds = location.objects.vehicle.bounds, size = spawned_objects.vehicle.size, current_damage = 0, despawn_timer = 0, ai_type = spawned_objects.vehicle.ai_type }
+                end
                 local char_id = spawned_objects.survivors[1].id
                 local c = server.getCharacterData(char_id)
                 server.setCharacterData(char_id, c.hp, false, true)
@@ -83,8 +85,11 @@ function onCreate(is_world_create)
             local random_transform = matrix.translation(math.random(location.objects.vehicle.bounds.x_min, location.objects.vehicle.bounds.x_max), 0, math.random(location.objects.vehicle.bounds.z_min, location.objects.vehicle.bounds.z_max))
 
             local spawn_transform, is_success = server.getOceanTransform(random_transform, 1000, 10000)
-            spawn_transform = matrix.multiply(spawn_transform, matrix.translation(math.random(-500, 500), 0, math.random(-500, 500)))
-
+            if location.ai_type == "heli" or location.ai_type == "plane" then
+                spawn_transform = matrix.multiply(spawn_transform, matrix.translation(math.random(-500, 500), aircraft_start_height, math.random(-500, 500)))
+            else
+                spawn_transform = matrix.multiply(spawn_transform, matrix.translation(math.random(-500, 500), 0, math.random(-500, 500)))
+            end
             if is_success then
                 local all_mission_objects = {}
                 local spawned_objects = {
@@ -158,11 +163,14 @@ function build_locations(playlist_index, location_index)
         object_data.index = object_index
 
         -- investigate tags
+        local _ai_type = "default"
         for tag_index, tag_object in pairs(object_data.tags) do
             if tag_object == "type=ai_heli" then
                 is_valid = true
+                _ai_type = "heli"
             elseif tag_object == "type=ai_plane" then
                 is_valid = true
+                _ai_type = "plane"
             elseif tag_object == "type=ai_boat" then
                 is_valid = true
             elseif tag_object == "unique" then
@@ -197,9 +205,9 @@ function build_locations(playlist_index, location_index)
             mission_objects.vehicle.bounds = bounds
 
             if is_unique then
-                table.insert(unique_locations, { playlist_index = playlist_index, location_index = location_index, data = location_data, objects = mission_objects } )
+                table.insert(unique_locations, { playlist_index = playlist_index, location_index = location_index, data = location_data, objects = mission_objects, ai_type=_ai_type} )
             else
-                table.insert(built_locations, { playlist_index = playlist_index, location_index = location_index, data = location_data, objects = mission_objects } )
+                table.insert(built_locations, { playlist_index = playlist_index, location_index = location_index, data = location_data, objects = mission_objects, ai_type=_ai_type} )
             end
         end
     end
