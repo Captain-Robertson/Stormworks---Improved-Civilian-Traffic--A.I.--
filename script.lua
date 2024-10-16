@@ -384,6 +384,9 @@ function onTick(tick_time)
     end
     for vehicle_id, vehicle_object in pairs(g_savedata.vehicles) do
         local _,vehicle_success = server.getVehicleData(vehicle_id)
+        if not vehicle_success then
+            cleanupVehicle(vehicle_id)
+        end
         if vehicle_object ~= nil and vehicle_success then
             vehicle_object.state.timer = vehicle_object.state.timer + 1
             if not isAircraft(vehicle_object) then
@@ -799,6 +802,28 @@ function onVehicleDamaged(vehicle_id, amount, x, y, z, body_id)
     local vehicle_object = g_savedata.vehicles[vehicle_id]
     if vehicle_object ~= nil then
         vehicle_object.current_damage = vehicle_object.current_damage + amount
+    end
+end
+
+function onVehicleDespawn(vehicle_id, peer_id)
+    cleanupVehicle(vehicle_id)
+end
+
+function cleanupVehicle(vehicle_id)
+    local vehicle_object = g_savedata.vehicles[vehicle_id]
+    if vehicle_object == nil then
+        return
+    end
+    g_savedata.vehicles[vehicle_id] = nil
+
+
+    server.removeMapObject(-1, vehicle_object.map_id)
+    server.removeMapLine(-1, vehicle_object.map_id)
+    for _, waypoint in pairs(vehicle_object.path) do
+        server.removeMapLine(-1, waypoint.ui_id)
+    end
+    for _, survivor in pairs(vehicle_object.survivors) do
+        server.despawnObject(survivor.id, true)
     end
 end
 
