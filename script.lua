@@ -1,4 +1,7 @@
-vehicle_count = property.slider("AI Count", 0, 256, 1, 128)
+max_vessel = property.slider("Max Vessel Count", 0, 256, 1, 128)
+max_aircraft = property.slider("Max Aircraft Count", 0, 256, 1, 128)
+starting_percentage = property.slider("Start AI Percentage", 0, 100, 1, 50)
+respawn_frequency = property.slider("Respawn Frequency (minutes)", 0, 60, 1, 5)
 
 g_savedata = { vehicles = {}, airfields = {} }
 
@@ -14,6 +17,9 @@ local g_debug_vehicle_id = "0"
 aircraft_start_height = 500
 cruise_height = 300
 update_all = true
+
+aircraft_count = 0
+vessel_count = 0
 
 holding_pattern = {
     {x=500, z=500},
@@ -45,37 +51,11 @@ function onCreate(is_world_create)
 
         build_airfields()
 
-        for i = 1, vehicle_count do
-
-            local random_location_index = math.random(1, #built_locations)
-            local location = built_locations[random_location_index]
-
-            local random_transform = matrix.translation(math.random(location.objects.vehicle.bounds.x_min, location.objects.vehicle.bounds.x_max), 0, math.random(location.objects.vehicle.bounds.z_min, location.objects.vehicle.bounds.z_max))
-
-            local spawn_transform, is_success =  server.getOceanTransform(random_transform, 1000, 10000)
-            spawn_transform = matrix.multiply(spawn_transform, matrix.translation(math.random(-500, 500), 0, math.random(-500, 500)))
-
-            if is_success then
-                local all_mission_objects = {}
-                local spawned_objects = {
-                    vehicle = spawnObject(spawn_transform, location.playlist_index, location.location_index, location.objects.vehicle, 0, nil, all_mission_objects),
-                    survivors = spawnObjects(spawn_transform, location.playlist_index,location.location_index, location.objects.survivors, all_mission_objects),
-                    objects = spawnObjects(spawn_transform, location.playlist_index, location.location_index, location.objects.objects, all_mission_objects),
-                    zones = spawnObjects(spawn_transform, location.playlist_index, location.location_index, location.objects.zones, all_mission_objects)
-                }
-
-
-                if isAircraft(spawned_objects.vehicle) then
-                    g_savedata.vehicles[spawned_objects.vehicle.id] = {survivors = spawned_objects.survivors, path = {}, state = { s = "pathing", timer = math.fmod(spawned_objects.vehicle.id, 300), is_simulating = false }, ui_id = server.getMapID(), map_id = server.getMapID(), ai_type = spawned_objects.vehicle.ai_type, bounds = location.objects.vehicle.bounds, current_damage = 0, despawn_timer = 0}
-                    createAircraftPath(spawned_objects.vehicle.id)
-                else
-                    g_savedata.vehicles[spawned_objects.vehicle.id] = {survivors = spawned_objects.survivors, destination = { x = 0, z = 0 }, path = {}, map_id = server.getMapID(), state = { s = "pseudo", timer = math.fmod(spawned_objects.vehicle.id, 300) }, bounds = location.objects.vehicle.bounds, size = spawned_objects.vehicle.size, current_damage = 0, despawn_timer = 0, ai_type = spawned_objects.vehicle.ai_type }
-                end
-                local char_id = spawned_objects.survivors[1].id
-                local c = server.getCharacterData(char_id)
-                server.setCharacterData(char_id, c.hp, false, true)
-                server.setAIState(char_id, 1)
-            end
+        for i = 1, math.floor(max_aircraft*starting_percentage/100) do
+            spawnAircraft()
+        end
+        for i = 1, math.floor(max_vessel*starting_percentage/100) do
+            spawnVessel()
         end
 
         for i = 1, #unique_locations do
@@ -382,6 +362,8 @@ function onTick(tick_time)
             end
         end
     end
+    aircraft_count = 0
+    vessel_count = 0
     for vehicle_id, vehicle_object in pairs(g_savedata.vehicles) do
         local _,vehicle_success = server.getVehicleData(vehicle_id)
         if not vehicle_success then
@@ -389,6 +371,13 @@ function onTick(tick_time)
         end
         if vehicle_object ~= nil and vehicle_success then
             vehicle_object.state.timer = vehicle_object.state.timer + 1
+
+            if isAircraft(vehicle_object) then
+                aircraft_count = aircraft_count + 1
+            else
+                vessel_count = vessel_count + 1
+            end
+
             if not isAircraft(vehicle_object) then
                 if vehicle_object.state.s == "pathing" then
 
@@ -796,6 +785,9 @@ function onTick(tick_time)
             end
         end
     end
+
+
+
 end
 
 function onVehicleDamaged(vehicle_id, amount, x, y, z, body_id)
@@ -1118,6 +1110,85 @@ function hasTag(tags, tag)
     end
 
     return false
+end
+
+function spawnAircraft()
+    if aircraft_count >= max_aircraft then
+        return
+    end
+    local random_location_index = math.random(1, #built_locations)
+    local location = built_locations[random_location_index]
+    local tries = 1
+    while location.ai_type ~= "heli" or location.ai_type ~= "plane" do
+        random_location_index = math.random(1, #built_locations)
+        location = built_locations[random_location_index]
+        tries = tries + 1
+        if tries >= 10 then
+            log("failed to find an aircraft prefab")
+            return
+        end
+    end
+    local random_transform = matrix.translation(math.random(location.objects.vehicle.bounds.x_min, location.objects.vehicle.bounds.x_max), 0, math.random(location.objects.vehicle.bounds.z_min, location.objects.vehicle.bounds.z_max))
+
+    local spawn_transform, is_success =  server.getOceanTransform(random_transform, 1000, 10000)
+    spawn_transform = matrix.multiply(spawn_transform, matrix.translation(math.random(-500, 500), aircraft_start_height, math.random(-500, 500)))
+
+    if is_success then
+        local all_mission_objects = {}
+        local spawned_objects = {
+            vehicle = spawnObject(spawn_transform, location.playlist_index, location.location_index, location.objects.vehicle, 0, nil, all_mission_objects),
+            survivors = spawnObjects(spawn_transform, location.playlist_index,location.location_index, location.objects.survivors, all_mission_objects),
+            objects = spawnObjects(spawn_transform, location.playlist_index, location.location_index, location.objects.objects, all_mission_objects),
+            zones = spawnObjects(spawn_transform, location.playlist_index, location.location_index, location.objects.zones, all_mission_objects)
+        }
+
+
+        g_savedata.vehicles[spawned_objects.vehicle.id] = {survivors = spawned_objects.survivors, path = {}, state = { s = "pathing", timer = math.fmod(spawned_objects.vehicle.id, 300), is_simulating = false }, ui_id = server.getMapID(), map_id = server.getMapID(), ai_type = spawned_objects.vehicle.ai_type, bounds = location.objects.vehicle.bounds, current_damage = 0, despawn_timer = 0}
+        createAircraftPath(spawned_objects.vehicle.id)
+        local char_id = spawned_objects.survivors[1].id
+        local c = server.getCharacterData(char_id)
+        server.setCharacterData(char_id, c.hp, false, true)
+        server.setAIState(char_id, 1)
+    end
+end
+
+function spawnVessel()
+    if vessel_count >= max_vessel then
+        return
+    end
+    local random_location_index = math.random(1, #built_locations)
+    local location = built_locations[random_location_index]
+    local tries = 1
+    while location.ai_type ~= "default" do
+        random_location_index = math.random(1, #built_locations)
+        location = built_locations[random_location_index]
+        tries = tries + 1
+        if tries >= 10 then
+            log("failed to find a vessel prefab")
+            return
+        end
+    end
+    local random_transform = matrix.translation(math.random(location.objects.vehicle.bounds.x_min, location.objects.vehicle.bounds.x_max), 0, math.random(location.objects.vehicle.bounds.z_min, location.objects.vehicle.bounds.z_max))
+
+    local spawn_transform, is_success =  server.getOceanTransform(random_transform, 1000, 10000)
+    spawn_transform = matrix.multiply(spawn_transform, matrix.translation(math.random(-500, 500), 0, math.random(-500, 500)))
+
+    if is_success then
+        local all_mission_objects = {}
+        local spawned_objects = {
+            vehicle = spawnObject(spawn_transform, location.playlist_index, location.location_index, location.objects.vehicle, 0, nil, all_mission_objects),
+            survivors = spawnObjects(spawn_transform, location.playlist_index,location.location_index, location.objects.survivors, all_mission_objects),
+            objects = spawnObjects(spawn_transform, location.playlist_index, location.location_index, location.objects.objects, all_mission_objects),
+            zones = spawnObjects(spawn_transform, location.playlist_index, location.location_index, location.objects.zones, all_mission_objects)
+        }
+
+
+        g_savedata.vehicles[spawned_objects.vehicle.id] = {survivors = spawned_objects.survivors, destination = { x = 0, z = 0 }, path = {}, map_id = server.getMapID(), state = { s = "pseudo", timer = math.fmod(spawned_objects.vehicle.id, 300) }, bounds = location.objects.vehicle.bounds, size = spawned_objects.vehicle.size, current_damage = 0, despawn_timer = 0, ai_type = spawned_objects.vehicle.ai_type }
+        local char_id = spawned_objects.survivors[1].id
+        local c = server.getCharacterData(char_id)
+        server.setCharacterData(char_id, c.hp, false, true)
+        server.setAIState(char_id, 1)
+    end
 end
 
 function isAircraft(vehicle_object)
