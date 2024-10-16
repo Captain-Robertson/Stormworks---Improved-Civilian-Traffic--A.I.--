@@ -218,7 +218,7 @@ function onVehicleUnload(vehicle_id)
     local vehicle_object = g_savedata.vehicles[vehicle_id]
     if vehicle_object ~= nil then
         if isAircraft(vehicle_object) then
-            vehicle_object.state.is_simulating = true
+            vehicle_object.state.is_simulating = false
         else
             vehicle_object.state.s = "pseudo"
         end
