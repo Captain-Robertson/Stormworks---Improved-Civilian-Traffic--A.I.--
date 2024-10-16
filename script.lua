@@ -137,13 +137,13 @@ function build_locations(playlist_index, location_index)
     local is_valid = false
     local is_unique = false
     local bounds = { x_min = -40000, z_min = -40000, x_max = 40000, z_max = 140000}
-
+    local _ai_type = "default"
     for object_index, object_data in iterObjects(playlist_index, location_index) do
 
         object_data.index = object_index
 
         -- investigate tags
-        local _ai_type = "default"
+
         for tag_index, tag_object in pairs(object_data.tags) do
             if tag_object == "type=ai_heli" then
                 is_valid = true
@@ -1114,12 +1114,13 @@ end
 
 function spawnAircraft()
     if aircraft_count >= max_aircraft then
+        log("aircraft limit reached")
         return
     end
     local random_location_index = math.random(1, #built_locations)
     local location = built_locations[random_location_index]
     local tries = 1
-    while location.ai_type ~= "heli" or location.ai_type ~= "plane" do
+    while location.ai_type ~= "heli" and location.ai_type ~= "plane" do
         random_location_index = math.random(1, #built_locations)
         location = built_locations[random_location_index]
         tries = tries + 1
@@ -1154,6 +1155,7 @@ end
 
 function spawnVessel()
     if vessel_count >= max_vessel then
+        log("vessel limit reached")
         return
     end
     local random_location_index = math.random(1, #built_locations)
