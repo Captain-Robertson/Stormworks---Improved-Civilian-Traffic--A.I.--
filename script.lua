@@ -1,6 +1,6 @@
 max_vessel = property.slider("Max Vessel Count", 0, 256, 1, 128)
-max_aircraft = property.slider("Max Aircraft Count", 0, 256, 1, 128)
-starting_percentage = property.slider("Start AI Percentage", 0, 100, 1, 50)
+max_aircraft = property.slider("Max Aircraft Count", 0, 256, 1, 64)
+starting_percentage = property.slider("Start AI Percentage", 0, 100, 1, 100)
 respawn_frequency = property.slider("Respawn Frequency (minutes)", 0, 60, 1, 5)
 
 g_savedata = { vehicles = {}, airfields = {} }
@@ -500,27 +500,26 @@ function onTick(tick_time)
                     end
                 end
 
-                local vehicle_hp = 600
+                local vehicle_hp = 4000
+				explosion_size = 0.6
                 if vehicle_object.size == "large" then
-                    vehicle_hp = 2400
+                    vehicle_hp = 100000
+					explosion_size = 1.5
                 end
                 if vehicle_object.size == "medium" then
-                    vehicle_hp = 1200
+                    vehicle_hp = 10000
+					explosion_size = 1.0
                 end
                 if  vehicle_object.current_damage > vehicle_hp then
                     vehicle_object.despawn_timer = vehicle_object.despawn_timer + 1
                 end
 
                 if vehicle_object.state.timer == 0 or (vehicle_object.despawn_timer > 60 * 60 * 2) then
-                    local vehicle_pos = server.getVehiclePos(vehicle_id)
-                    if vehicle_pos[14] < -20 or vehicle_object.despawn_timer > 60 * 60 * 2 then
-                        server.despawnVehicle(vehicle_id, true)
-                        for _, survivor in pairs(vehicle_object.survivors) do
-                            server.despawnObject(survivor.id, true)
-                        end
-                        g_savedata.vehicles[vehicle_id] = nil
-                    end
+                local vehicle_pos = server.getVehiclePos(vehicle_id)
+                if vehicle_pos[14] < -22 or vehicle_object.despawn_timer > 2 * 1 * 1 then
+                    server.despawnVehicle(vehicle_id, true) --clean up code moved further down the line for instantly destroyed vehicle
                 end
+            end
 
             elseif vehicle_object.ai_type == "heli" or vehicle_object.ai_type == "plane" then
                 local update_behaviour = false
@@ -783,12 +782,8 @@ function onTick(tick_time)
                 if (update_all or update_behaviour) or (vehicle_object.despawn_timer > 60 * 60 * 2) then
                     local vehicle_pos = server.getVehiclePos(vehicle_id)
                     if vehicle_pos[14] < -20 or  vehicle_object.despawn_timer > 60 * 60 * 2 then
-                        server.despawnVehicle(vehicle_id, true)
-                        for _, survivor in pairs(vehicle_object.survivors) do
-                            server.despawnObject(survivor.id, true)
+                        server.despawnVehicle(vehicle_id, true) --clean up code moved further down the line for instantly destroyed vehicle
                         end
-                        g_savedata.vehicles[vehicle_id] = nil
-                    end
                 end
 
                 update_all = false
@@ -813,6 +808,9 @@ function onVehicleDamaged(vehicle_id, amount, x, y, z, body_id)
 end
 
 function onVehicleDespawn(vehicle_id, peer_id)
+if g_savedata.vehicles[vehicle_id] == nil then
+        return
+    end
     cleanupVehicle(vehicle_id)
 end
 
@@ -823,6 +821,8 @@ function cleanupVehicle(vehicle_id)
     end
     g_savedata.vehicles[vehicle_id] = nil
 
+	local vehicle_pos = server.getVehiclePos(vehicle_id)
+    server.spawnExplosion(vehicle_pos, explosion_size)
 
     server.removeMapObject(-1, vehicle_object.map_id)
     server.removeMapLine(-1, vehicle_object.map_id)
