@@ -17,6 +17,7 @@ local g_debug_vehicle_id = "0"
 aircraft_start_height = 500
 cruise_height = 300
 update_all = true
+tick_counter = 0
 
 aircraft_count = 0
 vessel_count = 0
@@ -85,7 +86,7 @@ function onCreate(is_world_create)
     else
         for vehicle_id, vehicle_object in pairs(g_savedata.vehicles) do
 
-            if not isAircraft(vehicle_object) then
+            if not isAircraft(vehicle_object.ai_type) then
                 if vehicle_object.path == nil then
                     if createDestination(vehicle_id) then
                         vehicle_object.path = createPath(vehicle_id)
@@ -197,7 +198,7 @@ function onVehicleUnload(vehicle_id)
 
     local vehicle_object = g_savedata.vehicles[vehicle_id]
     if vehicle_object ~= nil then
-        if isAircraft(vehicle_object) then
+        if isAircraft(vehicle_object.ai_type) then
             vehicle_object.state.is_simulating = false
         else
             vehicle_object.state.s = "pseudo"
@@ -210,7 +211,7 @@ function onVehicleLoad(vehicle_id)
 
     local vehicle_object = g_savedata.vehicles[vehicle_id]
     if vehicle_object ~= nil then
-        if isAircraft(vehicle_object) then
+        if isAircraft(vehicle_object.ai_type) then
             vehicle_object.state.is_simulating = true
         else
             vehicle_object.state.s = "pathing"
@@ -224,7 +225,7 @@ function onVehicleLoad(vehicle_id)
             end
         end
         refuel(vehicle_id)
-        if isAircraft(vehicle_object) then
+        if isAircraft(vehicle_object.ai_type) then
             server.setAITarget(vehicle_object.survivors[1].id, matrix.identity())
             server.setAIState(vehicle_object.survivors[1].id, 1)
         end
@@ -234,7 +235,7 @@ end
 function createAircraftPath(vehicle_id)
 
     local vehicle_object = g_savedata.vehicles[vehicle_id]
-    if not isAircraft(vehicle_object) then
+    if not isAircraft(vehicle_object.ai_type) then
         log("boat trying to create aircraft path "..tostring(vehicle_id))
     end
     local random_number = math.random(1, 30)
@@ -372,13 +373,13 @@ function onTick(tick_time)
         if vehicle_object ~= nil and vehicle_success then
             vehicle_object.state.timer = vehicle_object.state.timer + 1
 
-            if isAircraft(vehicle_object) then
+            if isAircraft(vehicle_object.ai_type) then
                 aircraft_count = aircraft_count + 1
             else
                 vessel_count = vessel_count + 1
             end
 
-            if not isAircraft(vehicle_object) then
+            if not isAircraft(vehicle_object.ai_type) then
                 if vehicle_object.state.s == "pathing" then
 
                     if #vehicle_object.path > 0 then
@@ -391,9 +392,18 @@ function onTick(tick_time)
 
                             local vehicle_pos = server.getVehiclePos(vehicle_id)
                             local distance = calculate_distance_to_next_waypoint(vehicle_object.path[1], vehicle_pos)
-                            server.setAITarget(vehicle_object.survivors[1].id, (matrix.translation(vehicle_object.path[1].x, 0, vehicle_object.path[1].z)))
-                            server.setAIState(vehicle_object.survivors[1].id, 1)
 
+                            local players = server.getPlayers()
+                            local random_player = players[math.random(1, #players)]
+                            local random_player_transform = server.getPlayerPos(random_player.id)
+                            local player_distance = matrix.distance(random_player_transform, vehicle_pos)
+
+                            if (player_distance < 50) then
+                                server.setAIState(vehicle_object.survivors[1].id, 0)
+                            else
+                                server.setAITarget(vehicle_object.survivors[1].id, (matrix.translation(vehicle_object.path[1].x, 0, vehicle_object.path[1].z)))
+                                server.setAIState(vehicle_object.survivors[1].id, 1)
+                            end
                             refuel(vehicle_id)
 
                             if distance < 100 then
@@ -786,8 +796,13 @@ function onTick(tick_time)
         end
     end
 
-
-
+    if isTickID(0, respawn_frequency*60*60) then
+        spawnVessel()
+    end
+    if isTickID(1, respawn_frequency*60*60) then
+        spawnAircraft()
+    end
+    tick_counter = tick_counter + 1
 end
 
 function onVehicleDamaged(vehicle_id, amount, x, y, z, body_id)
@@ -1120,7 +1135,7 @@ function spawnAircraft()
     local random_location_index = math.random(1, #built_locations)
     local location = built_locations[random_location_index]
     local tries = 1
-    while location.ai_type ~= "heli" and location.ai_type ~= "plane" do
+    while not isAircraft(location.ai_type) do
         random_location_index = math.random(1, #built_locations)
         location = built_locations[random_location_index]
         tries = tries + 1
@@ -1161,7 +1176,7 @@ function spawnVessel()
     local random_location_index = math.random(1, #built_locations)
     local location = built_locations[random_location_index]
     local tries = 1
-    while location.ai_type ~= "default" do
+    while isAircraft(location.ai_type) do
         random_location_index = math.random(1, #built_locations)
         location = built_locations[random_location_index]
         tries = tries + 1
@@ -1193,8 +1208,8 @@ function spawnVessel()
     end
 end
 
-function isAircraft(vehicle_object)
-    return vehicle_object.ai_type == "heli" or vehicle_object.ai_type == "plane"
+function isAircraft(ai_type)
+    return ai_type == "heli" or ai_type == "plane"
 end
 
 function announce(message)
@@ -1206,4 +1221,8 @@ function log(message)
         return
     end
     server.announce("hostile_ai", "DEBUG:" .. message)
+end
+
+function isTickID(id, rate)
+    return (tick_counter + id) % rate == 0
 end
