@@ -375,7 +375,7 @@ function onTick(tick_time)
 
             if isAircraft(vehicle_object.ai_type) then
                 aircraft_count = aircraft_count + 1
-            else
+            elseif vehicle_object.ai_type == "default" then
                 vessel_count = vessel_count + 1
             end
 
@@ -392,13 +392,15 @@ function onTick(tick_time)
 
                             local vehicle_pos = server.getVehiclePos(vehicle_id)
                             local distance = calculate_distance_to_next_waypoint(vehicle_object.path[1], vehicle_pos)
+                            local player_distance = 9999
+                            if vehicle_object.ai_type == "hospital" then
+                                local players = server.getPlayers()
+                                local random_player = players[math.random(1, #players)]
+                                local random_player_transform = server.getPlayerPos(random_player.id)
+                                player_distance = matrix.distance(random_player_transform, vehicle_pos)
+                            end
 
-                            local players = server.getPlayers()
-                            local random_player = players[math.random(1, #players)]
-                            local random_player_transform = server.getPlayerPos(random_player.id)
-                            local player_distance = matrix.distance(random_player_transform, vehicle_pos)
-
-                            if (player_distance < 50) then
+                            if (vehicle_object.ai_type == "hospital" and player_distance < 50) then
                                 server.setAIState(vehicle_object.survivors[1].id, 0)
                             else
                                 server.setAITarget(vehicle_object.survivors[1].id, (matrix.translation(vehicle_object.path[1].x, 0, vehicle_object.path[1].z)))
@@ -501,25 +503,25 @@ function onTick(tick_time)
                 end
 
                 local vehicle_hp = 4000
-				explosion_size = 0.6
+                explosion_size = 0.6
                 if vehicle_object.size == "large" then
                     vehicle_hp = 100000
-					explosion_size = 1.5
+                    explosion_size = 1.5
                 end
                 if vehicle_object.size == "medium" then
                     vehicle_hp = 10000
-					explosion_size = 1.0
+                    explosion_size = 1.0
                 end
                 if  vehicle_object.current_damage > vehicle_hp then
                     vehicle_object.despawn_timer = vehicle_object.despawn_timer + 1
                 end
 
                 if vehicle_object.state.timer == 0 or (vehicle_object.despawn_timer > 60 * 60 * 2) then
-                local vehicle_pos = server.getVehiclePos(vehicle_id)
-                if vehicle_pos[14] < -22 or vehicle_object.despawn_timer > 2 * 1 * 1 then
-                    server.despawnVehicle(vehicle_id, true) --clean up code moved further down the line for instantly destroyed vehicle
+                    local vehicle_pos = server.getVehiclePos(vehicle_id)
+                    if vehicle_pos[14] < -22 or vehicle_object.despawn_timer > 2 * 1 * 1 then
+                        server.despawnVehicle(vehicle_id, true) --clean up code moved further down the line for instantly destroyed vehicle
+                    end
                 end
-            end
 
             elseif vehicle_object.ai_type == "heli" or vehicle_object.ai_type == "plane" then
                 local update_behaviour = false
@@ -783,7 +785,7 @@ function onTick(tick_time)
                     local vehicle_pos = server.getVehiclePos(vehicle_id)
                     if vehicle_pos[14] < -20 or  vehicle_object.despawn_timer > 60 * 60 * 2 then
                         server.despawnVehicle(vehicle_id, true) --clean up code moved further down the line for instantly destroyed vehicle
-                        end
+                    end
                 end
 
                 update_all = false
@@ -808,7 +810,7 @@ function onVehicleDamaged(vehicle_id, amount, x, y, z, body_id)
 end
 
 function onVehicleDespawn(vehicle_id, peer_id)
-if g_savedata.vehicles[vehicle_id] == nil then
+    if g_savedata.vehicles[vehicle_id] == nil then
         return
     end
     cleanupVehicle(vehicle_id)
@@ -821,7 +823,7 @@ function cleanupVehicle(vehicle_id)
     end
     g_savedata.vehicles[vehicle_id] = nil
 
-	local vehicle_pos = server.getVehiclePos(vehicle_id)
+    local vehicle_pos = server.getVehiclePos(vehicle_id)
     server.spawnExplosion(vehicle_pos, explosion_size)
 
     server.removeMapObject(-1, vehicle_object.map_id)
