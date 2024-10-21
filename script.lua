@@ -1,7 +1,7 @@
-max_vessel = property.slider("Max Vessel Count", 0, 256, 1, 128)
-max_aircraft = property.slider("Max Aircraft Count", 0, 256, 1, 64)
-starting_percentage = property.slider("Start AI Percentage", 0, 100, 1, 100)
-respawn_frequency = property.slider("Respawn Frequency (minutes)", 0, 60, 1, 5)
+max_vessel = property.slider("Max AI vessel count", 0, 256, 1, 128)
+max_aircraft = property.slider("Max AI aircraft count", 0, 256, 1, 64)
+starting_percentage = property.slider("Initial amount of AI vehicles in the world (%)", 0, 100, 1, 100)
+respawn_frequency = property.slider("AI vehicle respawn frequency (minutes)", 0, 60, 1, 5)
 
 g_savedata = { vehicles = {}, airfields = {} }
 
