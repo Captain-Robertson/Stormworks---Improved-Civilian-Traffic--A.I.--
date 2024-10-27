@@ -502,14 +502,14 @@ function onTick(tick_time)
                     end
                 end
 
-                local vehicle_hp = 4000
+                local vehicle_hp = 2000
                 explosion_size = 0.6
                 if vehicle_object.size == "large" then
-                    vehicle_hp = 100000
+                    vehicle_hp = 50000
                     explosion_size = 1.5
                 end
                 if vehicle_object.size == "medium" then
-                    vehicle_hp = 10000
+                    vehicle_hp = 5000
                     explosion_size = 1.0
                 end
                 if  vehicle_object.current_damage > vehicle_hp then
@@ -777,13 +777,13 @@ function onTick(tick_time)
                     server.setPopup(0, vehicle_object.ui_id, "test", true, popup_text, v_x, v_y + 40, v_z, 0)
                 end
 
-                if  vehicle_object.current_damage > 800 then
+                if  vehicle_object.current_damage > 500 then
                     vehicle_object.despawn_timer = vehicle_object.despawn_timer + 1
                 end
 
-                if (update_all or update_behaviour) or (vehicle_object.despawn_timer > 60 * 60 * 2) then
+                if vehicle_object.state.timer == 0 or (update_all or update_behaviour) or (vehicle_object.despawn_timer > 60 * 60 * 2) then
                     local vehicle_pos = server.getVehiclePos(vehicle_id)
-                    if vehicle_pos[14] < -20 or  vehicle_object.despawn_timer > 60 * 60 * 2 then
+                    if vehicle_pos[14] < -22 or vehicle_object.despawn_timer > 2 * 1 * 1 then
                         server.despawnVehicle(vehicle_id, true) --clean up code moved further down the line for instantly destroyed vehicle
                     end
                 end
