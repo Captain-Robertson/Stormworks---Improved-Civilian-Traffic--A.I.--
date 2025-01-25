@@ -115,7 +115,7 @@ function onCreate(is_world_create)
                 end
             end
             if vehicle_object.bounds == nil then
-                vehicle_object.bounds = { x_min = -40000, z_min = -40000, x_max = 40000, z_max = 140000}
+                vehicle_object.bounds = { x_min = -40000, z_min = -40000, x_max = 40000, z_max = 110000}
             end
             if vehicle_object.current_damage == nil then vehicle_object.current_damage = 0 end
             if vehicle_object.despawn_timer == nil then vehicle_object.despawn_timer = 0 end
@@ -137,7 +137,7 @@ function build_locations(playlist_index, location_index)
 
     local is_valid = false
     local is_unique = false
-    local bounds = { x_min = -40000, z_min = -40000, x_max = 40000, z_max = 140000}
+    local bounds = { x_min = -40000, z_min = -40000, x_max = 40000, z_max = 110000}
     local _ai_type = "default"
     for object_index, object_data in iterObjects(playlist_index, location_index) do
 
