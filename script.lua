@@ -1,9 +1,12 @@
-max_vessel = property.slider("Max AI vessel count", 0, 256, 1, 128)
-max_aircraft = property.slider("Max AI aircraft count", 0, 256, 1, 64)
 starting_percentage = property.slider("Initial amount of AI vehicles in the world (%)", 0, 100, 1, 100)
-respawn_frequency = property.slider("AI vehicle respawn frequency (minutes)", 0, 60, 1, 5)
 
-g_savedata = { vehicles = {}, airfields = {} }
+g_savedata = { 
+max_vessel = property.slider("Max AI vessel count", 0, 256, 1, 128),
+max_aircraft = property.slider("Max AI aircraft count", 0, 256, 1, 64),
+respawn_frequency = property.slider("AI vehicle respawn frequency (minutes)", 0, 60, 1, 5),
+vehicles = {}, 
+airfields = {}
+ }
 
 built_locations = {}
 unique_locations = {}
@@ -52,10 +55,10 @@ function onCreate(is_world_create)
 
         build_airfields()
 
-        for i = 1, math.floor(max_aircraft*starting_percentage/100) do
+        for i = 1, math.floor(g_savedata.max_aircraft*starting_percentage/100) do
             spawnAircraft()
         end
-        for i = 1, math.floor(max_vessel*starting_percentage/100) do
+        for i = 1, math.floor(g_savedata.max_vessel*starting_percentage/100) do
             spawnVessel()
         end
 
@@ -92,6 +95,10 @@ function onCreate(is_world_create)
                         vehicle_object.path = createPath(vehicle_id)
                     end
                 end
+				
+				g_savedata.max_vessel = g_savedata.max_vessel or 128
+				g_savedata.max_aircraft = g_savedata.max_aircraft or 64
+				g_savedata.respawn_frequency = g_savedata.respawn_frequency or 5
 
                 if server.getVehicleSimulating(vehicle_id) then
                     vehicle_object.state.s = "pathing"
@@ -115,7 +122,7 @@ function onCreate(is_world_create)
                 end
             end
             if vehicle_object.bounds == nil then
-                vehicle_object.bounds = { x_min = -40000, z_min = -40000, x_max = 40000, z_max = 110000}
+                vehicle_object.bounds = { x_min = -40000, z_min = -45000, x_max = 40000, z_max = 110000}
             end
             if vehicle_object.current_damage == nil then vehicle_object.current_damage = 0 end
             if vehicle_object.despawn_timer == nil then vehicle_object.despawn_timer = 0 end
@@ -137,7 +144,7 @@ function build_locations(playlist_index, location_index)
 
     local is_valid = false
     local is_unique = false
-    local bounds = { x_min = -40000, z_min = -40000, x_max = 40000, z_max = 110000}
+    local bounds = { x_min = -40000, z_min = -45000, x_max = 40000, z_max = 110000}
     local _ai_type = "default"
     for object_index, object_data in iterObjects(playlist_index, location_index) do
 
@@ -793,10 +800,10 @@ function onTick(tick_time)
         end
     end
 
-    if isTickID(0, respawn_frequency*60*60) then
+    if isTickID(0, g_savedata.respawn_frequency*60*60) then
         spawnVessel()
     end
-    if isTickID(1, respawn_frequency*60*60) then
+    if isTickID(1, g_savedata.respawn_frequency*60*60) then
         spawnAircraft()
     end
     tick_counter = tick_counter + 1
@@ -1135,7 +1142,7 @@ function hasTag(tags, tag)
 end
 
 function spawnAircraft()
-    if aircraft_count >= max_aircraft then
+    if aircraft_count >= g_savedata.max_aircraft then
         log("aircraft limit reached")
         return
     end
@@ -1176,7 +1183,7 @@ function spawnAircraft()
 end
 
 function spawnVessel()
-    if vessel_count >= max_vessel then
+    if vessel_count >= g_savedata.max_vessel then
         log("vessel limit reached")
         return
     end
