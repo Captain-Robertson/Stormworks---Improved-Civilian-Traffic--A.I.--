@@ -935,6 +935,11 @@ function onCustomCommand(full_message, peer_id, is_admin, is_auth, command, arg1
             end
         end
     end
+	if command == "?ai_clear" and is_admin then
+        for vehicle_id, _ in pairs(g_savedata.vehicles) do
+            server.despawnVehicle(vehicle_id, true)
+        end
+    end
 end
 
 function refuel(vehicle_id)
