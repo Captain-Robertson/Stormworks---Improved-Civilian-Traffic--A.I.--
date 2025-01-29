@@ -790,7 +790,7 @@ function onTick(tick_time)
 
                 if vehicle_object.state.timer == 0 or (update_all or update_behaviour) or (vehicle_object.despawn_timer > 60 * 60 * 2) then
                     local vehicle_pos = server.getVehiclePos(vehicle_id)
-                    if vehicle_pos[14] < -22 or vehicle_object.despawn_timer > 2 * 1 * 1 then
+                    if vehicle_pos[14] < -2 or vehicle_object.despawn_timer > 2 * 1 * 1 then
                         server.despawnVehicle(vehicle_id, true) --clean up code moved further down the line for instantly destroyed vehicle
                     end
                 end
