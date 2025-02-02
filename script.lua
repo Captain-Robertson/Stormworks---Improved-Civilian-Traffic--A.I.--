@@ -622,6 +622,8 @@ function onTick(tick_time)
 
                         if distance < 100 then
                             vehicle_object.holding_index = 1 + ((vehicle_object.holding_index) % 4);
+							table.remove(g_savedata.airfields[vehicle_object.path[1].airfield_index].queue, 1) -- A quick, dirty fix to prevent the indefinite holding state when encountering the airfield queue bug
+                            vehicle_object.state.s = "waiting"
                         end
                     end
 
@@ -790,7 +792,7 @@ function onTick(tick_time)
 
                 if vehicle_object.state.timer == 0 or (update_all or update_behaviour) or (vehicle_object.despawn_timer > 60 * 60 * 2) then
                     local vehicle_pos = server.getVehiclePos(vehicle_id)
-                    if vehicle_pos[14] < -22 or vehicle_object.despawn_timer > 2 * 1 * 1 then
+                    if vehicle_pos[14] < -2 or vehicle_object.despawn_timer > 2 * 1 * 1 then
                         server.despawnVehicle(vehicle_id, true) --clean up code moved further down the line for instantly destroyed vehicle
                     end
                 end
@@ -915,6 +917,7 @@ function onCustomCommand(full_message, peer_id, is_admin, is_auth, command, arg1
             for vehicle_id, vehicle_object in pairs(g_savedata.vehicles) do
                 server.removeMapObject(0, vehicle_object.map_id)
                 server.removeMapLine(0, vehicle_object.map_id)
+				server.setPopup(0, vehicle_object.ui_id, "test", false, "", 0, 0, 0, 0)
                 for i = 1, #vehicle_object.path - 1 do
                     server.removeMapLine(0, vehicle_object.path[i].ui_id)
                 end
