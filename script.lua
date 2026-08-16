@@ -83,7 +83,7 @@ function onCreate(is_world_create)
                     zones = spawnObjects(spawn_transform, location.playlist_index, location.location_index, location.objects.zones, all_mission_objects)
                 }
 
-                g_savedata.vehicles[spawned_objects.vehicle.id] = {survivors = spawned_objects.survivors, destination = { x = 0, z = 0 },  path = {}, map_id = server.getMapID(), state = { s = "pseudo", timer = math.fmod(spawned_objects.vehicle.id, 300) }, bounds = location.objects.vehicle.bounds, size = spawned_objects.vehicle.size, current_damage = 0, despawn_timer = 0, ai_type = spawned_objects.vehicle.ai_type }
+                g_savedata.vehicles[spawned_objects.vehicle.id] = {survivors = spawned_objects.survivors, destination = { x = 0, z = 0 },  path = {}, map_id = server.getMapID(), state = { s = "pseudo", timer = math.fmod(spawned_objects.vehicle.id, 300) }, bounds = location.objects.vehicle.bounds, size = spawned_objects.vehicle.size, current_damage = 0, despawn_timer = 0, ai_type = spawned_objects.vehicle.ai_type, is_unique = true }
             end
         end
     else
@@ -428,7 +428,7 @@ function onTick(tick_time)
                 elseif vehicle_object.state.s == "waiting" then
 
                     local wait_time = 3600
-                    if vehicle_object.ai_type == "hospital" then wait_time = 3600 * 30 end
+                    if vehicle_object.ai_type == "hospital" then wait_time = 3600 * 10 end
 
                     if vehicle_object.state.timer >= wait_time then
                         vehicle_object.state.timer = 0
@@ -774,8 +774,8 @@ function onTick(tick_time)
                     server.addMapObject(0, vehicle_object.map_id, 1, vehicle_object.ai_type == "heli" and 15 or 13, v_x, v_z, 0, 0, vehicle_id, 0, "AI " .. vehicle_object.ai_type .. " " .. vehicle_id, 1, debug_data)
                 end
 
-                --debug render
-                if render_debug and vehicle_object.state.is_simulating then
+                --debug render - Uncomment the below if you want to see the nearby aircraft data on the screen as a pop-up window
+                --[[ if render_debug and vehicle_object.state.is_simulating then
                     local vehicle_pos = server.getVehiclePos(vehicle_id)
                     local v_x, v_y, v_z = matrix.position(vehicle_pos)
                     local target_data = server.getAITarget(vehicle_object.survivors[1].id)
@@ -784,7 +784,7 @@ function onTick(tick_time)
                         popup_text = popup_text .. "\ndest_server: " .. math.floor(target_data.x) .. " " .. math.floor(target_data.y) .. " " .. math.floor(target_data.z)
                     end
                     server.setPopup(0, vehicle_object.ui_id, "test", true, popup_text, v_x, v_y + 40, v_z, 0)
-                end
+                end ]]--
 
                 if  vehicle_object.current_damage > 500 then
                     vehicle_object.despawn_timer = vehicle_object.despawn_timer + 1
@@ -945,9 +945,36 @@ function onCustomCommand(full_message, peer_id, is_admin, is_auth, command, arg1
             end
         end
     end
-	if command == "?ai_clear" and is_admin then
+	
+	if command == "?ai_respawn_aircraft" and is_admin then
+        if aircraft_count >= g_savedata.max_aircraft then
+            server.announce("AI Traffic", "Cannot spawn aircraft: Cap reached (" .. tostring(aircraft_count) .. "/" .. tostring(g_savedata.max_aircraft) .. ")")
+        else
+            spawnAircraft()
+            server.announce("AI Traffic", "Spawning single AI aircraft...")
+        end
+    end
+	
+	if command == "?ai_respawn_vessel" and is_admin then
+        if vessel_count >= g_savedata.max_vessel then
+            server.announce("AI Traffic", "Cannot spawn vessel: Cap reached (" .. tostring(vessel_count) .. "/" .. tostring(g_savedata.max_vessel) .. ")")
+        else
+            spawnVessel()
+            server.announce("AI Traffic", "Spawning single AI vessel...")
+        end
+    end
+	
+	if command == "?ai_clear_all" and is_admin then
         for vehicle_id, _ in pairs(g_savedata.vehicles) do
             server.despawnVehicle(vehicle_id, true)
+        end
+    end
+	
+	if command == "?ai_clear" and is_admin then
+        for vehicle_id, vehicle_object in pairs(g_savedata.vehicles) do
+            if not vehicle_object.is_unique then
+                server.despawnVehicle(vehicle_id, true)
+            end
         end
     end
 end
